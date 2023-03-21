@@ -1,0 +1,7 @@
+streamlit
+streamlit-chat
+PyPDF2
+openai
+tiktoken
+llama-index
+langchain==0.0.117

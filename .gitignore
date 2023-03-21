@@ -1,0 +1,6 @@
+.env
+.streamlit
+.DS_Store
+.idea/
+.python-version
+.streamlit/secrets.toml
