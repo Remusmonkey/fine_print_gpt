@@ -27,7 +27,7 @@ uploaded_file = st.sidebar.file_uploader("Please get started by uploading a cred
 
 other_options = st.sidebar.selectbox(
     'Alternatively, you can load one of the prepared credit terms below:',
-    ('', 'Wheatland Bank', 'Capital One for Williams Sonoma', 'Zions Credit Card'), index=0)
+    ('', 'Affirm', 'Wheatland Bank', 'Capital One for Williams Sonoma', 'Zions Credit Card'), index=0)
 
 st.sidebar.write("""
 Some example questions:
@@ -55,6 +55,7 @@ QA_PROMPT_TMPL = (
 QA_PROMPT = QuestionAnswerPrompt(QA_PROMPT_TMPL)
 
 bank_to_urls = {
+    'Affirm': 'https://filebin.net/n73hwbtk00fandd1/affirm_terms.pdf',
     'Zions Credit Card': 'https://files.consumerfinance.gov/a/assets/credit-card-agreements/pdf/QCCA/ZIONS_BANCORPORATION_NATIONAL_ASSOCIATION/Consumer_Credit_Card_Agreement_and_Disclosure_Statement_2022.01.03.pdf',
     'Capital One for Williams Sonoma': 'https://files.consumerfinance.gov/a/assets/credit-card-agreements/pdf/QCCA/CAPITAL_ONE_NATIONAL_ASSOCIATION/credit-card-agreement-for-williams-sonoma-key-rewards-visa-pottery-barn-key-rewards-visa-west-elm-key-rewards-visa-key-rewards-visa-in-capital-one-na.pdf',
     'Wheatland Bank': 'https://files.consumerfinance.gov/a/assets/credit-card-agreements/pdf/QCCA/WHEATLAND_BANK/WEB_ONLY_Cardholder_Agreement_Platinum_Visa.pdf',
@@ -80,6 +81,7 @@ if uploaded_file or other_options:
             pdf_file = uploaded_file
         else:
             url = bank_to_urls[other_options]
+            st.session_state['pdf_url'] = url
             remote_file = urlopen(Request(url)).read()
             pdf_file = io.BytesIO(remote_file)
         index = initialize_chatgpt_with_pdf(pdf_file)
@@ -87,6 +89,8 @@ if uploaded_file or other_options:
     else:
         index = st.session_state['index']
 
+    if st.session_state.get('pdf_url'):
+        st.write(f"Click [here]({st.session_state.get('pdf_url')}) to download the PDF file.")
     content = st.text_input("You: ", "", key="input", disabled=False)
     if content:
         response = index.query(content, text_qa_template=QA_PROMPT)
