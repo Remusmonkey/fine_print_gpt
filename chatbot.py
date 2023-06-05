@@ -82,7 +82,8 @@ if uploaded_file or other_options:
         else:
             if other_options == 'Affirm':
                 with open("./pdfs/affirm_terms.pdf", 'rb') as file:
-                    pdf_file = file.read()
+                    pdf_file = io.BytesIO(file.read())
+
             else:
                 url = bank_to_urls[other_options]
                 st.session_state['pdf_url'] = url
@@ -98,8 +99,6 @@ if uploaded_file or other_options:
     content = st.text_input("You: ", "", key="input", disabled=False)
     if content:
         response = index.query(content, text_qa_template=QA_PROMPT)
-        # maybe
-        # response = index.query(content, text_qa_template=QA_PROMPT)
         st.session_state.past.append(content)
         st.session_state.generated.append(response.response)
 else:
