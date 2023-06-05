@@ -80,10 +80,14 @@ if uploaded_file or other_options:
         if uploaded_file:
             pdf_file = uploaded_file
         else:
-            url = bank_to_urls[other_options]
-            st.session_state['pdf_url'] = url
-            remote_file = urlopen(Request(url)).read()
-            pdf_file = io.BytesIO(remote_file)
+            if other_options == 'Affirm':
+                with open("./pdfs/affirm_terms.pdf", 'rb') as file:
+                    pdf_file = file.read()
+            else:
+                url = bank_to_urls[other_options]
+                st.session_state['pdf_url'] = url
+                remote_file = urlopen(Request(url)).read()
+                pdf_file = io.BytesIO(remote_file)
         index = initialize_chatgpt_with_pdf(pdf_file)
         st.session_state['index'] = index
     else:
