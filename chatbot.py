@@ -1,12 +1,11 @@
 import streamlit as st
 from streamlit_chat import message as st_chat
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 import os
-from llama_index import Document
-from llama_index import LLMPredictor
 
-from llama_index import QuestionAnswerPrompt, GPTSimpleVectorIndex
-from langchain.chat_models import ChatOpenAI
+from llama_index.core import VectorStoreIndex, Document, SimpleDirectoryReader
+from llama_index.core.prompts import RichPromptTemplate
+from llama_index.llms.openai import OpenAI
 import io
 from urllib.request import Request, urlopen
 
@@ -44,15 +43,24 @@ Credit Card Terms are taken from CFPB Database and belong to issuing banks.
 The responses from the chat bot do not constitute legal or financial advice. 
 """)
 
-
-QA_PROMPT_TMPL = (
-    "We have provided context information below. \n"
+CHAT_PROMPT = RichPromptTemplate = (
+    """We have provided context information below. \n"
     "---------------------\n"
-    "{context_str}"
+    "{{context_str}}"
     "\n---------------------\n"
-    "Given this information, please answer the question: {query_str}\n"
+    "Given this information, please answer the question: {{query_str}}\n"""
 )
-QA_PROMPT = QuestionAnswerPrompt(QA_PROMPT_TMPL)
+
+# QA_PROMPT_TMPL = (
+#     "We have provided context information below. \n"
+#     "---------------------\n"
+#     "{context_str}"
+#     "\n---------------------\n"
+#     "Given this information, please answer the question: {query_str}\n"
+# )
+# QA_PROMPT = QuestionAnswerPrompt(QA_PROMPT_TMPL)
+
+# CHAT_PROMPT = RichPromptTemplate(RICH_TEMPLATE) ## A- Probably not functional and inaccurate usage
 
 bank_to_urls = {
     'Affirm': 'https://filebin.net/n73hwbtk00fandd1/affirm_terms.pdf',
@@ -60,6 +68,7 @@ bank_to_urls = {
     'Capital One for Williams Sonoma': 'https://files.consumerfinance.gov/a/assets/credit-card-agreements/pdf/QCCA/CAPITAL_ONE_NATIONAL_ASSOCIATION/credit-card-agreement-for-williams-sonoma-key-rewards-visa-pottery-barn-key-rewards-visa-west-elm-key-rewards-visa-key-rewards-visa-in-capital-one-na.pdf',
     'Wheatland Bank': 'https://files.consumerfinance.gov/a/assets/credit-card-agreements/pdf/QCCA/WHEATLAND_BANK/WEB_ONLY_Cardholder_Agreement_Platinum_Visa.pdf',
 }
+
 
 def initialize_chatgpt_with_pdf(selected_file):
     reader = PdfReader(selected_file)
@@ -69,10 +78,19 @@ def initialize_chatgpt_with_pdf(selected_file):
         curr_text = f"We have {len(reader.pages)} pages of credit card terms. The following text are from " \
                     f"page {idx+1}: \n" \
                     f"{text}"
-        docs.append(Document(curr_text))
-    llm_predictor = LLMPredictor(llm=ChatOpenAI(temperature=1, model_name="gpt-3.5-turbo"))
-    index = GPTSimpleVectorIndex(docs, llm_predictor=llm_predictor)
+        docs.append(Document(text=curr_text))
+    llm = OpenAI(
+        model="gpt-4o",
+        temperature=0.1
+    )  # new model calling schema for LLMPredictor
+    print(docs)
+    index = VectorStoreIndex.from_documents(docs, llm_predictor=llm) # "GPTSimpleVectorIndex" is no longer supported
     return index
+
+# def beautifulsoup_html_to_text(url):
+#     url_docs = bsw.load_data(url)
+#     print(url_docs[0].text)
+
 
 
 if uploaded_file or other_options:
@@ -98,7 +116,8 @@ if uploaded_file or other_options:
         st.write(f"Click [here]({st.session_state.get('pdf_url')}) to download the PDF file.")
     content = st.text_input("You: ", "", key="input", disabled=False)
     if content:
-        response = index.query(content, text_qa_template=QA_PROMPT)
+        query_engine = index.as_query_engine()
+        response = query_engine.query(CHAT_PROMPT)
         st.session_state.past.append(content)
         st.session_state.generated.append(response.response)
 else:
